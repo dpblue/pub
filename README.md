@@ -12,6 +12,7 @@
 
 /* Allowed C functions: exit, open, close, write, read, malloc, free */
 
+
 void	print_help(void)
 {
 	ft_printf("-------------------------------------------------\n");
