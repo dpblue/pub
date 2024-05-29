@@ -1,0 +1,115 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   find_solution.backtrack.c                          :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: ade-sarr <marvin@42.fr>                    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/02/25 22:00:30 by ade-sarr          #+#    #+#             */
+/*   Updated: 2024/02/25 22:00:33 by ade-sarr         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "bsq.h"
+#include "ft_str_nbr.h"
+
+void	clean_map(t_map *map)
+{
+	int	l;
+	int	c;
+
+	l = 0;
+	while (l < map->nblines)
+	{
+		c = 0;
+		while (c < map->width)
+		{
+			if (map->lines[l][c] == map->chr_fill)
+				map->lines[l][c] = map->chr_empty;
+			c++;
+		}
+		l++;
+	}
+}
+
+/* Renvoie le prochain intervalle libre à la ligne courante en partant de la
+*  colonne <x0>. <x0> sera positionné sur la prochaine colonne vide s'il se
+*  trouve sur un obstacle et la fct renvoie la prochaine colonne APRES la fin de
+*  l'intervalle. Si aucune colonne libre n'est trouvé: return = x0 = map->width.
+*/
+int	getfreerange(t_map *map, int *x0)
+{
+	const char	*line = map->lines[map->nline];
+	int			x;
+
+	x = *x0;
+	while (x < map->width && line[x] == map->chr_obst)
+		x++;
+	*x0 = x;
+	while (x < map->width && line[x] == map->chr_empty)
+		x++;
+	//ft_printf("getfreerange returns: %i  x0: %i\n", x, *x0); getchar();
+	return (x);
+}
+
+void	update_solution(t_map *map, int line0, int x0, int x1)
+{
+	//ft_printf("update_solution(line0: %i, x0: %i, x1: %i)\n", line0, x0, x1); //getchar();
+	map->sol_size = map->nline - line0 + 1;
+	map->sol_line0 = line0;
+	map->sol_line1 = map->nline;
+	map->sol_x0 = x0;
+	map->sol_x1 = x0 + map->sol_size;
+	//ft_printf("   solution: size: %i, line0: %i, line1: %i, x0: %i, x1: %i)\n", map->sol_size,
+	//	map->sol_line0, map->sol_line1, map->sol_x0, map->sol_x1);
+	fill_map(map);
+	print_map(map);
+	clean_map(map);
+	print_map(map);
+}
+
+void	recall_find_sol(t_map *map, int line0, int x0, int x1)
+{
+	if (x1 - x0 <= map->sol_size)
+		return ;
+	map->nline++;
+	find_solution_bt(map, line0, x0, x1);
+	map->nline--;
+}
+
+/* Algo de backtracking de recherche de la solution (plus grand carré)
+*  sur intervalle [x0, x1[
+*/
+void	find_solution_bt(t_map *map, int line0, int x0, int x1)
+{
+	const int	nline = map->nline;
+	int			rx0;
+	int			rx1;
+
+	//ft_printf("find_solution(map, line0=%i, x0=%i, x1=%i)  nline=%i\n",
+	//	line0, x0, x1, nline);
+	if (map->nline + 1 - line0 > map->sol_size)
+		update_solution(map, line0, x0, x1);
+	rx0 = x0;
+	rx1 = getfreerange(map, &rx0);
+	while (rx0 < map->width)
+	{
+		if (rx0 == x0 && rx1 >= x1) // si intervalle libre 
+		{
+			// si on a un carre et si sa taille > taille meilleure solution
+			/*if ((x1 - x0 == nline + 1 - line0) && (x1 - x0 > map->sol_size))
+				update_solution(map, line0, x0, x1);
+			// sinon si on n'est pas a la derniere ligne et si hauteur < largeur
+			else*/ if ((nline + 1 < map->nblines) && (nline + 1 - line0 < x1 - x0))
+				recall_find_sol(map, line0, x0, x1);
+		}
+		else // si sous intervalle libre
+			if (nline + 1 < map->nblines)
+				recall_find_sol(map, line0, rx0, rx1);
+		// si nouvel intervalle plus grand et si on est pas sur derniere ligne
+		if ((rx1 > x1) && (nline + 1 < map->nblines))
+			recall_find_sol(map, nline, rx0, rx1);
+		rx0 = rx1;
+		rx1 = getfreerange(map, &rx0);
+	}
+}
